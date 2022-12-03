@@ -17,6 +17,7 @@ openai.api_key = os.getenv('OPENAI')
 
 app = Flask(__name__)
 
+
 @app.route('/bot', methods=['POST'])
 def bot():
     # add webhook logic here and return a response
@@ -63,6 +64,7 @@ def bot():
         msg.body(response1)
     return str(resp)
 
+
 @app.route('/chat', methods=['POST'])
 def chat():
     # Retrieve user input from request
@@ -79,5 +81,10 @@ def chat():
     # Return response as JSON
     return jsonify(response)
 
+
 if __name__ == '__main__':
     app.run()
+
+
+def getApp():
+    return app
