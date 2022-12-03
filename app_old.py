@@ -13,6 +13,7 @@ app = Flask(__name__)
 def bot():
     # add webhook logic here and return a response
     incoming_msg = request.values.get('Body', '').lower()
+
     resp = MessagingResponse()
     msg = resp.message()
     responded = False
@@ -44,7 +45,8 @@ You can give me the following commands:
 ~  *'developer'*:   Know the developer.
 """
 
-    if re.search('h[ae]llo', incoming_msg):  # will find and match either hello or hallo in a message
+    # will find and match either hello or hallo in a message
+    if re.search('h[ae]llo', incoming_msg):
         msg.body(response1)
         responded = True
 
@@ -71,6 +73,59 @@ You can give me the following commands:
         msg.media(data['message'])
         responded = True
 
+    elif re.search('score', incoming_msg):
+
+        # search for recipe based on user input (if empty, return featured recipes)
+        search_text = incoming_msg.replace('score', '')
+        search_text = search_text.strip()
+
+        # Get wallet bilic Score
+
+        # print(search_text)
+
+        # data = json.dumps({'searchText': search_text})
+
+        # testing = "testing this shit out {}, recipes.".format(search_text)
+
+        api_url = "https://api.bilic.co.uk/rating/address/{}".format(search_text)
+
+        # Set the request headers
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+
+        # Make a GET request to the API
+        # response = requests.get(api_url)
+
+        # call bilic api
+
+        # print(api_url)
+        
+        # Check the response status code
+
+        r = requests.get(api_url, headers)
+
+        response = requests.get(api_url)
+
+        if response.status_code == 200:
+        # Print the response data
+            print(response.json())
+        else:
+            # Print an error message
+            print(f"Failed to retrieve data from the API. Status code: {response.status_code}")
+
+        # if r.status_code == 200:
+        #     data = r.json()
+        #     print(data)
+
+        #     quote = f'{data["bilic_rating"]} ({data["nbr_account_age_days"]})'
+        # else:
+        #     quote = 'I could not retrieve a quote at this time, sorry.'
+
+        # msg.body(quote)
+        responded = True
+
     elif re.search('recipe', incoming_msg):
 
         # search for recipe based on user input (if empty, return featured recipes)
@@ -84,6 +139,7 @@ You can give me the following commands:
         r = requests.put(
             'https://api.apify.com/v2/actor-tasks/o7PTf4BDcHhQbG7a2/input?token=qTt3H59g5qoWzesLWXeBKhsXu&ui=1',
             data=data, headers={"content-type": "application/json"})
+            
         if r.status_code != 200:
             result = 'Sorry, I cannot search for recipes at this time.'
 
@@ -94,7 +150,8 @@ You can give me the following commands:
             result = 'Sorry, I cannot search Allrecipes.com at this time.'
 
         if not result:
-            result = "I am searching Allrecipes.com for the best {} recipes.".format(search_text)
+            result = "I am searching Allrecipes.com for the best {} recipes.".format(
+                search_text)
 
             result += "\nPlease wait for a few moments before typing 'get recipe' to get your recipes!"
         msg.body(result)
@@ -144,7 +201,8 @@ Recipe: {}
 """.format(name, calories, float(rating), rating_count, prep, cook, ready_in, url)
 
                 else:
-                    result = 'Sorry, I could not find any results for {}'.format(search_text)
+                    result = 'Sorry, I could not find any results for {}'.format(
+                        search_text)
 
             else:
                 result = 'Sorry, your previous search query has failed. Please try searching again.'
@@ -168,9 +226,11 @@ Recipe: {}
                 title = article['title']
                 url = article['url']
                 if 'Z' in article['publishedAt']:
-                    published_at = datetime.datetime.strptime(article['publishedAt'][:19], "%Y-%m-%dT%H:%M:%S")
+                    published_at = datetime.datetime.strptime(
+                        article['publishedAt'][:19], "%Y-%m-%dT%H:%M:%S")
                 else:
-                    published_at = datetime.datetime.strptime(article['publishedAt'], "%Y-%m-%dT%H:%M:%S%z")
+                    published_at = datetime.datetime.strptime(
+                        article['publishedAt'], "%Y-%m-%dT%H:%M:%S%z")
                 result += """
 *{}*
 Read more: {}
@@ -192,55 +252,29 @@ _Published at {:02}/{:02}/{:02} {:02}:{:02}:{:02} UTC_
         msg.body(result)
         responded = True
 
-    elif incoming_msg.startswith('statistics'):
+    elif incoming_msg.startswith('analyse'):
         # runs task to aggregate data from Apify Covid-19 public actors
-        requests.post(
-            'https://api.apify.com/v2/actor-tasks/5MjRnMQJNMQ8TybLD/run-sync?token=qTt3H59g5qoWzesLWXeBKhsXu&ui=1')
+        # requests.post('https://api.apify.com/v2/actor-tasks/5MjRnMQJNMQ8TybLD/run-sync?token=qTt3H59g5qoWzesLWXeBKhsXu&ui=1')
 
         # get the last run dataset items
-        r = requests.get(
-            'https://api.apify.com/v2/actor-tasks/5MjRnMQJNMQ8TybLD/runs/last/dataset/items?token=qTt3H59g5qoWzesLWXeBKhsXu')
+        # wallet = incoming_msg.replace('analyse', '')
+        wallet = incoming_msg.split(" ")
+        wallet = wallet[1]
+
+        # api_url = "https://api.bilic.co.uk/rating/address/" + wallet
+
+        # print(str(api_url))
+        
+        r = requests.get('https://api.bilic.co.uk/rating/address/' + wallet)
 
         if r.status_code == 200:
             data = r.json()
-
-            country = incoming_msg.replace('statistics', '')
-            country = country.strip()
-            country_data = list(filter(lambda x: x['country'].lower().startswith(country), data))
-
-            if country_data:
-                result = ''
-
-                for i in range(len(country_data)):
-                    data_dict = country_data[i]
-                    last_updated = datetime.datetime.strptime(data_dict.get('lastUpdatedApify', None),
-                                                              "%Y-%m-%dT%H:%M:%S.%fZ")
-
-                    result += """
-*Statistics for country {}*
-Infected: {}
-Tested: {}
-Recovered: {}
-Deceased: {}
-Last updated: {:02}/{:02}/{:02} {:02}:{:02}:{:03} UTC
-""".format(
-                        data_dict['country'],
-                        data_dict.get('infected', 'NA'),
-                        data_dict.get('tested', 'NA'),
-                        data_dict.get('recovered', 'NA'),
-                        data_dict.get('deceased', 'NA'),
-                        last_updated.day,
-                        last_updated.month,
-                        last_updated.year,
-                        last_updated.hour,
-                        last_updated.minute,
-                        last_updated.second
-                    )
-            else:
-                result = "Country not found. Sorry!"
-
+            print(data)
+            
+            result= f'{data["bilic_rating"]} ({data["nbr_transaction_count"]})'
         else:
-            result = "I cannot retrieve statistics at this time. Sorry!"
+            result = 'I could not retrieve wallet data at this time, sorry.'
+        print(result)
 
         msg.body(result)
         responded = True
@@ -266,7 +300,8 @@ Last updated: {:02}/{:02}/{:02} {:02}:{:02}:{:03} UTC
         responded = True
 
         if not responded:
-            msg.body("Sorry, I don't understand. Send 'hello' for a list of commands.")
+            msg.body(
+                "Sorry, I don't understand. Send 'hello' for a list of commands.")
 
     if re.search('developer', incoming_msg):
         mess = """
@@ -287,5 +322,16 @@ Last updated: {:02}/{:02}/{:02} {:02}:{:02}:{:03} UTC
     return str(resp)
 
 
+'''
+todo:
+ChatGPT Bot
+Get Wallet Risk Score
+Get Number Risk Score
+Send Money to Wallet 
+'''
+
+
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
+
+
